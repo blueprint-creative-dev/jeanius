@@ -33,14 +33,16 @@ class Rest {
 			'callback'            => [ __CLASS__, 'save_description' ],
 		] );
 
-		// Generate Jeanius report (OpenAI)
-		// POST /wp-json/jeanius/v1/generate
-		register_rest_route( 'jeanius/v1', '/generate', [
-			'methods'             => 'POST',
-			'permission_callback' => fn() => is_user_logged_in(),
-			'callback'            => [ __CLASS__, 'generate_report' ],
-		] );
-	}
+               // Generate Jeanius report (OpenAI)
+               // POST /wp-json/jeanius/v1/generate
+               register_rest_route( 'jeanius/v1', '/generate', [
+                       'methods'             => 'POST',
+                       'permission_callback' => fn() => is_user_logged_in(),
+                       'callback'            => function ( \WP_REST_Request $r ) {
+                               return self::generate_report();
+                       },
+               ] );
+        }
 
 	public static function save_stage( \WP_REST_Request $r ) {
 		$post_id = \Jeanius\current_assessment_id();
@@ -169,112 +171,121 @@ class Rest {
 		return $out;
 	}
 
-	/**
-	 * generate_report() – 5 sequential GPT calls
-	 */
-	public static function generate_report( \WP_REST_Request $r ) {
-		$post_id = \Jeanius\current_assessment_id();
-		
-		if ( ! $post_id ) {
-			return new \WP_Error( 'login', 'Login required', [ 'status' => 401 ] );
-		}
+       /**
+        * generate_report() – 5 sequential GPT calls
+        */
+       public static function generate_report( ?int $post_id = null ) {
+               if ( $post_id === null ) {
+                       $post_id = \Jeanius\current_assessment_id();
+               }
 
-		// If HTML copy fields already filled, skip regeneration
-		if ( get_field( 'ownership_stakes_md_copy', $post_id ) ) {
-			return [ 'status' => 'ready' ];
-		}
+               if ( ! $post_id ) {
+                       return new \WP_Error( 'login', 'Login required', [ 'status' => 401 ] );
+               }
 
-		$api_key = trim( (string) get_field( 'openai_api_key', 'option' ) );
-		
-		if ( empty( $api_key ) ) {
-			return new \WP_Error( 'key', 'OpenAI key missing', [ 'status' => 500 ] );
-		}
+               return self::generate_report_for_post( $post_id );
+       }
 
-		$stage_data = json_decode( get_field( 'full_stage_data', $post_id ) ?: '{}', true );
+       /**
+        * Core OpenAI/ACF logic for generating the report for a post
+        */
+       private static function generate_report_for_post( int $post_id ) {
+               // If HTML copy fields already filled, skip regeneration
+               if ( get_field( 'ownership_stakes_md_copy', $post_id ) ) {
+                       return [ 'status' => 'ready' ];
+               }
 
-		// STEP 1 – Ownership Stakes
-		$stakes_md = self::call_openai(
-			$api_key,
-			self::prompt_ownership( $stage_data )
-		);
+               $api_key = trim( (string) get_field( 'openai_api_key', 'option' ) );
 
-		update_field( 'ownership_stakes_md', $stakes_md, $post_id );
+               if ( empty( $api_key ) ) {
+                       return new \WP_Error( 'key', 'OpenAI key missing', [ 'status' => 500 ] );
+               }
 
-		// Convert $stakes_md to HTML <ul><li>...</li></ul> and save as copy
-		$stakes_lines = explode( "\n", trim( $stakes_md ) );
-		$stakes_title = array_shift( $stakes_lines );
-		$stakes_html  = '<ul>';
-		
-		foreach ( $stakes_lines as $line ) {
-			$clean = trim( ltrim( $line, "-• \t" ) );
-			if ( ! empty( $clean ) ) {
-				$stakes_html .= '<li>' . esc_html( $clean ) . '</li>';
-			}
-		}
-		$stakes_html .= '</ul>';
+               $stage_data = json_decode( get_field( 'full_stage_data', $post_id ) ?: '{}', true );
 
-		update_field( 'ownership_stakes_md_copy', $stakes_html, $post_id );
+               // STEP 1 – Ownership Stakes
+               $stakes_md = self::call_openai(
+                       $api_key,
+                       self::prompt_ownership( $stage_data )
+               );
 
-		// STEP 2 – Life Messages
-		$life_md = self::call_openai(
-			$api_key,
-			self::prompt_life_messages( $stakes_md, $stage_data )
-		);
-		
-		update_field( 'life_messages_md', $life_md, $post_id );
-		update_field( 'life_messages_md_copy', $life_md, $post_id );
+               update_field( 'ownership_stakes_md', $stakes_md, $post_id );
 
-		// STEP 3 – Transcendent Threads
-		$threads_md = self::call_openai(
-			$api_key,
-			self::prompt_threads( $stakes_md, $stage_data )
-		);
-		
-		update_field( 'transcendent_threads_md', $threads_md, $post_id );
-		update_field( 'transcendent_threads_md_copy', $threads_md, $post_id );
+               // Convert $stakes_md to HTML <ul><li>...</li></ul> and save as copy
+               $stakes_lines = explode( "\n", trim( $stakes_md ) );
+               $stakes_title = array_shift( $stakes_lines );
+               $stakes_html  = '<ul>';
 
-		// STEP 4 – Sum of Jeanius
-		$sum_md = self::call_openai(
-			$api_key,
-			self::prompt_sum( $stakes_md, $life_md, $threads_md, $stage_data )
-		);
-		
-		update_field( 'sum_jeanius_md', $sum_md, $post_id );
+               foreach ( $stakes_lines as $line ) {
+                       $clean = trim( ltrim( $line, "-• \t" ) );
+                       if ( ! empty( $clean ) ) {
+                               $stakes_html .= '<li>' . esc_html( $clean ) . '</li>';
+                       }
+               }
+               $stakes_html .= '</ul>';
 
-		// Remove the heading "### Sum of Your Jeanius" (case-insensitive, with/without extra spaces/newlines)
-		$sum_md_formatted = preg_replace( '/^###\s*Sum of Your Jeanius\s*/i', '', trim( $sum_md ) );
-		update_field( 'sum_jeanius_md_copy', $sum_md_formatted, $post_id );
+               update_field( 'ownership_stakes_md_copy', $stakes_html, $post_id );
 
-		// STEP 4.5 – Grab colleges list from textarea
-		$raw_colleges = get_field( 'target_colleges', $post_id );
-		$colleges     = [];
+               // STEP 2 – Life Messages
+               $life_md = self::call_openai(
+                       $api_key,
+                       self::prompt_life_messages( $stakes_md, $stage_data )
+               );
 
-		// Split on commas or line-breaks, trim, dedupe, keep non-empty
-		if ( is_string( $raw_colleges ) ) {
-			$parts    = preg_split( '/[\r\n,]+/', $raw_colleges );
-			$colleges = array_unique( array_filter( array_map( 'trim', $parts ) ) );
-		}
+               update_field( 'life_messages_md', $life_md, $post_id );
+               update_field( 'life_messages_md_copy', $life_md, $post_id );
 
-		// STEP 5 – College Essay Topics
-		$essay_md = self::call_openai(
-			$api_key,
-			self::prompt_essays( $stakes_md, $threads_md, $stage_data, $colleges )
-		);
-		
-		update_field( 'essay_topics_md', $essay_md, $post_id );
-		update_field( 'essay_topics_md_copy', $essay_md, $post_id );
+               // STEP 3 – Transcendent Threads
+               $threads_md = self::call_openai(
+                       $api_key,
+                       self::prompt_threads( $stakes_md, $stage_data )
+               );
 
-		// Store full raw markdown
-		$full = "## Ownership Stakes\n$stakes_md\n\n" .
-		        "## Life Messages\n$life_md\n\n" .
-		        "## Transcendent Threads\n$threads_md\n\n" .
-		        "## Sum of Your Jeanius\n$sum_md\n\n" .
-		        "## College Essay Topics\n$essay_md";
-		        
-		update_field( 'jeanius_report_md', $full, $post_id );
+               update_field( 'transcendent_threads_md', $threads_md, $post_id );
+               update_field( 'transcendent_threads_md_copy', $threads_md, $post_id );
 
-		return [ 'status' => 'ready' ];
-	}
+               // STEP 4 – Sum of Jeanius
+               $sum_md = self::call_openai(
+                       $api_key,
+                       self::prompt_sum( $stakes_md, $life_md, $threads_md, $stage_data )
+               );
+
+               update_field( 'sum_jeanius_md', $sum_md, $post_id );
+
+               // Remove the heading "### Sum of Your Jeanius" (case-insensitive, with/without extra spaces/newlines)
+               $sum_md_formatted = preg_replace( '/^###\s*Sum of Your Jeanius\s*/i', '', trim( $sum_md ) );
+               update_field( 'sum_jeanius_md_copy', $sum_md_formatted, $post_id );
+
+               // STEP 4.5 – Grab colleges list from textarea
+               $raw_colleges = get_field( 'target_colleges', $post_id );
+               $colleges     = [];
+
+               // Split on commas or line-breaks, trim, dedupe, keep non-empty
+               if ( is_string( $raw_colleges ) ) {
+                       $parts    = preg_split( '/[\r\n,]+/', $raw_colleges );
+                       $colleges = array_unique( array_filter( array_map( 'trim', $parts ) ) );
+               }
+
+               // STEP 5 – College Essay Topics
+               $essay_md = self::call_openai(
+                       $api_key,
+                       self::prompt_essays( $stakes_md, $threads_md, $stage_data, $colleges )
+               );
+
+               update_field( 'essay_topics_md', $essay_md, $post_id );
+               update_field( 'essay_topics_md_copy', $essay_md, $post_id );
+
+               // Store full raw markdown
+               $full = "## Ownership Stakes\n$stakes_md\n\n" .
+                       "## Life Messages\n$life_md\n\n" .
+                       "## Transcendent Threads\n$threads_md\n\n" .
+                       "## Sum of Your Jeanius\n$sum_md\n\n" .
+                       "## College Essay Topics\n$essay_md";
+
+               update_field( 'jeanius_report_md', $full, $post_id );
+
+               return [ 'status' => 'ready' ];
+       }
 
 	/**
 	 * Call OpenAI and return the assistant's text
