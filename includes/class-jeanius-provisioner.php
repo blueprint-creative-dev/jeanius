@@ -20,13 +20,13 @@ class Provisioner {
 		if ( $existing ) {
 			// Reset by putting it back to draft and wiping meta (optional)
 			$post_id = $existing[0];
-			wp_update_post( [ 'ID' => $post_id, 'post_status' => 'draft' ] );
+			wp_update_post( [ 'ID' => $post_id, 'post_status' => 'publish' ] );
 			delete_post_meta_by_key( 'jeanius_status', $post_id ); // example
 		} else {
 			// Create a fresh one
 			$post_id = wp_insert_post( [
 				'post_type'   => 'jeanius_assessment',
-				'post_status' => 'draft',
+				'post_status' => 'publish',
 				'post_author' => $user_id,
 				'post_title'  => 'Assessment for user ' . $user_id,
 			] );

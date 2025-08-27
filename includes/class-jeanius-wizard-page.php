@@ -1655,71 +1655,145 @@ public static function render_results() {
 
 <head>
     <meta charset="<?php bloginfo( 'charset' ); ?>">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <?php wp_head(); ?>
-    <style>
-    body {
-        font-family: Georgia, serif;
-        padding: 40px;
-        max-width: 860px;
-        margin: auto
-    }
-
-    h2 {
-        color: #003d7c;
-        margin-top: 2.2rem;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 4px
-    }
-
-    #loading {
-        font-size: 1.1rem
-    }
-
-    table {
-        border-collapse: collapse;
-        width: 100%;
-        margin-bottom: 1em
-    }
-
-    th,
-    td {
-        border: 1px solid #ddd;
-        padding: 6px
-    }
-
-    ul {
-        margin-left: 1.2em
-    }
-    </style>
 </head>
 
-<body <?php body_class(); ?>>
-
-    <h1>Your Jeanius Insights Report</h1>
-
+<body class="results-page" <?php body_class('student-report'); ?>>
     <div id="loading" <?php if ( $is_ready ) echo ' style="display:none"'; ?>>
         Generating your report… this may take up to a minute.
     </div>
+    <?php 
+      $current_user = wp_get_current_user();
+      $first_name = $current_user->user_firstname;
+      $last_name  = $current_user->user_lastname; ?>
+    <header id="result-page-header">
+      <div class="header-container">
+        <table style="width:100%; border-collapse:collapse;">
+        <tr>
+          <!-- Logo column -->
+          <td class="logo" style="width:60%; vertical-align:middle; padding:0; border: none;">
+            <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/assessment-logo.png' ); ?>" 
+                alt="Jeanius Logo" 
+                class="header-logo">
+          </td>
+
+          <!-- Info column -->
+          <?php if($first_name || $last_name) { ?>
+          <td class="info" style="width:40%; vertical-align:middle; text-align:right; padding:0; border: none;">
+            <table style="width:100%; border-collapse:collapse;">
+              <tbody>
+                <tr class="info-item">
+                  <td class="item-title" style="text-align:right; white-space:nowrap;">PREPARED FOR:&nbsp;</td>
+                  <td class="name" style="text-align:left;"><?php echo $first_name; ?> <?php echo $last_name; ?></td>
+                </tr>
+                <tr class="info-item">
+                  <td class="item-title" style="text-align:right; white-space:nowrap;">CERTIFIED BRILLIANT:&nbsp;</td>
+                  <td class="date" style="text-align:left;"><?php echo date('m / d / y'); ?></td>
+                </tr>
+                <tr class="info-item">
+                  <td class="item-title" style="text-align:right; white-space:nowrap;">JEANIUS ADVISOR:&nbsp;</td>
+                  <td class="advisor" style="text-align:left;">B. COLE</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+          <?php } ?>
+        </tr>
+      </table>
+      </div>
+    </header>
 
     <div id="report">
-        <?php
-	    if ( $is_ready ) {
-	        foreach ( $sections as $title => $html ) {
-	            if ( ! $html ) continue;
-	            $anchor_link = preg_replace("/[^A-Za-z0-9]/", '-', strtolower(((isset($title) && $title) ? $title : '')));
+        <?php if ( $is_ready ) { ?>
+          <?php if ( isset( $sections['Ownership Stakes'] ) && $sections['Ownership Stakes'] ) : ?>
+              <section id="ownership-stakes" class="intro-section report-section">
+                    <!-- Ribbon Bar -->
+                    <div class="ribbon-bar">
+                      <h2>Your Ownership Stakes</h2>
+                    </div>
+                   <div class="intro">
+                    <p>Ownership Stakes are the <span class="bold color-black"><i>pillars</i></span> of your life’s story and serve as the core principles from your journey that you can talk about with <span class="color-red"><i>experience</i></span> and <span class="bold color-red"><i>authority.</i></span></p>
+                    <p>Each of these points provide <span class="bold color-blue"><i>self-awareness</i></span> and <span class="bold color-blue"><i>a sense of identity</i></span> in the world and are what will make your essay unique to you.</p>
+                  </div>
+                  <div class="pillars-wrapper">
+                  </div>
+                  <div class="stake-content">
+                    <?php echo wp_kses_post( $sections['Ownership Stakes'] ); ?>
+                    <img class="desktop" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/pdf/pillars.png' ); ?>">
+                    <img class="mobile no-pdf" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/pdf/pillars-mb.png' ); ?>">
+                  </div>
+              </section>
+          <?php endif; ?>
 
-	            echo '<section id="'.$anchor_link.'">';
-	            echo '<h2>'. esc_html( $title ) .'</h2>';
-	            echo wp_kses_post( $html );   // already HTML
-	            echo '</section>';
-	        } ?>
-	        <div class="cta-wrapper report-pdf">
-	        	<a id="sendPdfBtn" href="javascript:void(0);" class="button">Send the blueprint results as a PDF to yourself/or someone else</a>
-	        </div>
-	    <?php }
-	    ?>
+          <?php if ( isset( $sections['Life Messages'] ) && $sections['Life Messages'] ) : ?>
+              <section id="life-messages" class="life-messages report-section">
+                <div class="ribbon-bar">
+                  <h2>Your Life Messages</h2>
+                </div>
+                <div class="intro">
+                    <p>Life Messages are the thoughts and ideas that you can share in your essay with <span class="bold color-red"><i>authenticity</i></span> and <span class="bold color-red"><i>credibility</i></span> because you’ve already lived these messages. To convey your true Jeanius in your essay requires writing from a place of authority, and these are <span class="bold color-blue"><i>the messages that point to the impact that your story can have on others.</i></span></p>
+                    <p class="center-align">The following are <span class="bold color-red"><i>7 life messages</i></span> that you can confidently share with the world:</p>
+                </div>
+                <div class="blue-box no-break">
+                  <?php echo wp_kses_post( $sections['Life Messages'] ); ?>
+                </div>
+              </section>
+          <?php endif; ?>
+            <div class="page-break"></div>
+          <?php if ( isset( $sections['Transcendent Threads'] ) && $sections['Transcendent Threads'] ) : ?>
+              <section id="transcendent-threads" class="transcendent-section report-section">
+                <div class="ribbon-bar">
+                  <h2>Transcendent Threads</h2>
+                </div>
+                <div class="intro">
+                  <p><span class="bold color-blue"><i>Transcendent Threads</i></span> are the essence of who you are and how your life interacts with every other life around you. Consider them <span class="bold color-blue"><i>your hidden superpowers</i></span> as you write about who you are, what you want to accomplish, and the future that you’re dreaming of. </p>
+                  <p>Knowing your unique Threads is like having <span class="bold color-red"><i>an advanced degree in personal awareness,</i></span> understanding your identity, and why— who you are—matters to others.</p>
+                  <p>Your true Jeanius is unleashed when you understand the 3 strongest transcendent threads that don’t just connect you to some people; they connect you to everyone else on the planet. Transcendent Threads strengthen your key relationships, clarify your key decisions, and refine your exceptional place in the world.</p>
+
+                  <h5><i>Your Transcendent Threads follow this pattern:</i></h5>
+                </div>
+                <div class="transcendent-content">
+                  <div class="bg-img">
+                    <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/pdf/trans.png' ); ?>">
+                  </div>
+                  <?php echo wp_kses_post( $sections['Transcendent Threads'] ); ?>
+                </div>
+              </section>
+          <?php endif; ?>
+            <div class="page-break"></div>
+          <?php if ( isset( $sections['Sum of Your Jeanius'] ) && $sections['Sum of Your Jeanius'] ) : ?>
+              <section id="sum-of-your-jeanius" class="sum-of-jeanious-section report-section">
+                 <div class="ribbon-bar">
+                  <h2>Your Jeanius Summary</h2>
+                </div>
+                <div class="jeanious-sum-wrapper">
+                  <?php echo wp_kses_post( $sections['Sum of Your Jeanius'] ); ?>
+                </div>
+                <div class="bg-wrapper">
+                  <img src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/pdf/darts.png' ); ?>">
+                </div>
+              </section>
+          <?php endif; ?>
+            <div class="page-break"></div>
+          <?php if ( isset( $sections['College Essay Topics'] ) && $sections['College Essay Topics'] ) : ?>
+              <section id="college-essay-topics" class="college-section report-section">
+                <div class="ribbon-bar">
+                  <h2>College Essay Topics</h2>
+                </div>
+                <div class="college-info-wrapper">
+                  <?php echo wp_kses_post( $sections['College Essay Topics'] ); ?>
+                </div>
+              </section>
+          <?php endif; ?>
+
+          <div class="cta-wrapper report-pdf">
+              <a id="sendPdfBtn" href="javascript:void(0);" class="button">
+                  Send the blueprint results as a PDF to yourself/or someone else
+              </a>
+          </div>
+        <?php } ?>
     </div>
     <script type="text/javascript">
     	const $p = jQuery('#ownership-stakes p');
@@ -1740,36 +1814,43 @@ public static function render_results() {
 		  $p.contents().first().remove();
 		}
 
-    // generating PDF to send
     document.addEventListener("DOMContentLoaded", function () {
-      const button = document.getElementById("sendPdfBtn");
+    const button = document.getElementById("sendPdfBtn");
 
-      if (button) {
-        button.addEventListener("click", function () {
-          // Clone page HTML and remove the button
-          const cloned = document.body.cloneNode(true);
-          const btn = cloned.querySelector("#sendPdfBtn");
-          if (btn) btn.remove();
+    if (button) {
+  button.addEventListener("click", function () {
+    // Get full HTML (includes <head> and linked CSS/fonts)
+    const html = document.body.innerHTML;
 
-          const html = "<!DOCTYPE html>" + cloned.outerHTML;
-          fetch("/wp-admin/admin-ajax.php", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: new URLSearchParams({
-              action: "send_results_pdf_from_dom",
-              html: html,
-            }),
-          })
-            .then((res) => res.text())
-            .then((response) => {
-              alert("PDF has been emailed!");
-            });
-        });
-      }
-    });
-    // End generating PDF to send
+    fetch("/wp-admin/admin-ajax.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        action: "send_results_pdf_from_dom",
+        html: html,
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          // Log HTTP errors to console
+          console.error("Server returned an error:", res.status, res.statusText);
+        }
+        return res.text();
+      })
+      .then((response) => {
+        console.log("Server response:", response);
+        alert("PDF has been emailed!");
+      })
+      .catch((error) => {
+        // Catch network or parsing errors
+        console.error("Fetch error:", error);
+      });
+  });
+}
+  });
+
 
     </script>
     <?php if ( ! $is_ready ) : ?>
@@ -1796,7 +1877,27 @@ public static function render_results() {
         });
     </script>
     <?php endif; ?>
+    <div class="page-break"></div>
+    <footer id="result-footer">
+    <div class="help-box">
+      <div class="speech-bubble">
+        <h2>HELP</h2>
+        <p><em><strong>We decided we still need a<br>Jeanius Advisor</strong> to help us <br> edit and coach us through <br> the rest of the Essay...</em></p>
+      </div>
 
+      <div class="call-section">
+        <p class="call">Call us @</p>
+        <p class="phone-number">800.987.6543</p>
+        <p class="advising-text">
+          <em>We can <strong>add "Advising"</strong> and<br>
+          stay with you through the entire <br> process.
+          <strong>We're Glad You asked!</strong></em>
+        </p>
+      </div>
+
+      <div class="result-footer-logo"><img src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/report-logo.png' ); ?>" alt="Jeanius Logo"></div>
+    </div>
+    </footer>
     <?php wp_footer(); ?>
 </body>
 

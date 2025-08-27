@@ -1,0 +1,20 @@
+{
+    "bebas neu pro regular": {
+        "normal": "bebas_neu_pro_regular_normal_628fd60721cf333bb6171eaef0343389"
+    },
+    "bebas neu pro ex eb": {
+        "800": "bebas_neu_pro_ex_eb_800_4ccdd720c4a8befcafbe70ba05e6ee98"
+    },
+    "bebas neu pro ex eb italic": {
+        "800_italic": "bebas_neu_pro_ex_eb_italic_800_italic_362198a35133134c148d86e0a5fbd7a6"
+    },
+    "bebas neu pro ex md": {
+        "500": "bebas_neu_pro_ex_md_500_538ec5388b2e3ac3fbf0e2fe8cfb7520"
+    },
+    "macklin sans bold italic": {
+        "bold_italic": "macklin_sans_bold_italic_bold_italic_d46c989346684ac6043e01db5068dddb"
+    },
+    "macklin sans ex bold italic": {
+        "800_italic": "macklin_sans_ex_bold_italic_800_italic_52899987360f0be8f6af88ff1a5deb90"
+    }
+}
