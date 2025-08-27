@@ -689,3 +689,54 @@ function remove_admin_bar_for_customers() {
         }
     }
 }
+
+/**
+ * Trigger assessment regeneration when the admin clicks the regenerate button.
+ *
+ * Hooks into ACF's save action for `jeanius_assessment` posts. When the
+ * specific button field (`field_68af564391c91`) is submitted, all ACF fields
+ * except a small allow‑list are cleared and the assessment regeneration helper
+ * is invoked.
+ */
+function jeanius_maybe_regenerate_assessment( $post_id ) {
+    // Run only for our custom post type.
+    if ( get_post_type( $post_id ) !== 'jeanius_assessment' ) {
+        return;
+    }
+
+    // Ensure the regenerate button was pressed.
+    if ( empty( $_POST['acf']['field_68af564391c91'] ) ) {
+        return;
+    }
+
+    $keep = [
+        'dob',
+        'consent_granted',
+        'share_with_parent',
+        'parent_email',
+        'stage_data',
+        'full_stage_data',
+        'target_colleges',
+    ];
+
+    // Remove all other ACF fields for this post.
+    $fields = get_field_objects( $post_id );
+    if ( $fields ) {
+        foreach ( $fields as $field ) {
+            if ( ! in_array( $field['name'], $keep, true ) ) {
+                delete_field( $field['key'], $post_id );
+            }
+        }
+    }
+
+    // Call helper to regenerate the assessment contents.
+    if ( function_exists( '\\Jeanius\\regenerate_assessment' ) ) {
+        \Jeanius\regenerate_assessment( $post_id );
+    }
+
+    // Optional admin notice confirming regeneration.
+    add_action( 'admin_notices', function () {
+        echo '<div class="notice notice-success is-dismissible"><p>Assessment regeneration triggered.</p></div>';
+    } );
+}
+add_action( 'acf/save_post', 'jeanius_maybe_regenerate_assessment', 20 );
