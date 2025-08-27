@@ -39,7 +39,8 @@ class Rest {
                        'methods'             => 'POST',
                        'permission_callback' => fn() => is_user_logged_in(),
                        'callback'            => function ( \WP_REST_Request $r ) {
-                               return self::generate_report();
+                               $post_id = \Jeanius\current_assessment_id();
+                               return self::generate_report( $post_id );
                        },
                ] );
         }
@@ -174,13 +175,18 @@ class Rest {
        /**
         * generate_report() – 5 sequential GPT calls
         */
-       public static function generate_report( ?int $post_id = null ) {
-               if ( $post_id === null ) {
-                       $post_id = \Jeanius\current_assessment_id();
+       public static function generate_report( int $post_id ) {
+               if ( ! get_current_user_id() ) {
+                       return new \WP_Error( 'login', 'Login required', [ 'status' => 401 ] );
                }
 
-               if ( ! $post_id ) {
-                       return new \WP_Error( 'login', 'Login required', [ 'status' => 401 ] );
+               $author_id = (int) get_post_field( 'post_author', $post_id );
+               if ( ! $author_id ) {
+                       return new \WP_Error( 'notfound', 'Assessment not found', [ 'status' => 404 ] );
+               }
+
+               if ( get_current_user_id() !== $author_id && ! current_user_can( 'manage_options' ) ) {
+                       return new \WP_Error( 'forbidden', 'Not your assessment', [ 'status' => 403 ] );
                }
 
                return self::generate_report_for_post( $post_id );
