@@ -82,5 +82,6 @@ function run_jeanius() {
 run_jeanius();
 
 // added from 7/7/2025
-require_once __DIR__ . '/vendor/autoload.php'; 
+require_once __DIR__ . '/vendor/autoload.php';
 require plugin_dir_path( __FILE__ ) . 'includes/extra-functions.php';
+require plugin_dir_path( __FILE__ ) . 'includes/regenerate-assessment.php';
