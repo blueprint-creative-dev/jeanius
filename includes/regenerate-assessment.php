@@ -4,8 +4,7 @@ namespace Jeanius;
 /**
  * Regenerate the Jeanius assessment for a given post ID.
  *
- * Clears the current user to the assessment's author so the existing REST
- * generation logic runs against the correct record, invokes the generator,
+ * Temporarily switches to the assessment's author, invokes the generator,
  * then restores the original user context.
  */
 function regenerate_assessment( int $post_id ): void {
@@ -17,7 +16,7 @@ function regenerate_assessment( int $post_id ): void {
     $original = \get_current_user_id();
     \wp_set_current_user( $author_id );
 
-    Rest::generate_report( new \WP_REST_Request( 'POST', '/jeanius/v1/generate' ) );
+    Rest::generate_report( $post_id );
 
     \wp_set_current_user( $original );
 }
