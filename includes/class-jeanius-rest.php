@@ -215,6 +215,10 @@ class Rest {
                        self::prompt_ownership( $stage_data )
                );
 
+               if ( is_wp_error( $stakes_md ) ) {
+                       return $stakes_md;
+               }
+
                update_field( 'ownership_stakes_md', $stakes_md, $post_id );
 
                // Convert $stakes_md to HTML <ul><li>...</li></ul> and save as copy
@@ -238,6 +242,10 @@ class Rest {
                        self::prompt_life_messages( $stakes_md, $stage_data )
                );
 
+               if ( is_wp_error( $life_md ) ) {
+                       return $life_md;
+               }
+
                update_field( 'life_messages_md', $life_md, $post_id );
                update_field( 'life_messages_md_copy', $life_md, $post_id );
 
@@ -247,6 +255,10 @@ class Rest {
                        self::prompt_threads( $stakes_md, $stage_data )
                );
 
+               if ( is_wp_error( $threads_md ) ) {
+                       return $threads_md;
+               }
+
                update_field( 'transcendent_threads_md', $threads_md, $post_id );
                update_field( 'transcendent_threads_md_copy', $threads_md, $post_id );
 
@@ -255,6 +267,10 @@ class Rest {
                        $api_key,
                        self::prompt_sum( $stakes_md, $life_md, $threads_md, $stage_data )
                );
+
+               if ( is_wp_error( $sum_md ) ) {
+                       return $sum_md;
+               }
 
                update_field( 'sum_jeanius_md', $sum_md, $post_id );
 
@@ -278,6 +294,10 @@ class Rest {
                        self::prompt_essays( $stakes_md, $threads_md, $stage_data, $colleges )
                );
 
+               if ( is_wp_error( $essay_md ) ) {
+                       return $essay_md;
+               }
+
                update_field( 'essay_topics_md', $essay_md, $post_id );
                update_field( 'essay_topics_md_copy', $essay_md, $post_id );
 
@@ -296,28 +316,33 @@ class Rest {
 	/**
 	 * Call OpenAI and return the assistant's text
 	 */
-	private static function call_openai( string $key, array $messages ): string {
-		$resp = wp_remote_post( 'https://api.openai.com/v1/chat/completions', [
-			'timeout' => 60,
-			'headers' => [
-				'Content-Type'  => 'application/json',
-				'Authorization' => 'Bearer ' . $key,
-			],
-			'body' => wp_json_encode( [
-				'model'       => 'o3-mini',
-				'temperature' => 0.7,
-				'messages'    => $messages,
-			] ),
-		] );
+        private static function call_openai( string $key, array $messages ) {
+                $resp = wp_remote_post( 'https://api.openai.com/v1/chat/completions', [
+                        'timeout' => 60,
+                        'headers' => [
+                                'Content-Type'  => 'application/json',
+                                'Authorization' => 'Bearer ' . $key,
+                        ],
+                        'body' => wp_json_encode( [
+                                'model'       => 'gpt-4o-mini',
+                                'temperature' => 0.7,
+                                'messages'    => $messages,
+                        ] ),
+                ] );
 
-		if ( is_wp_error( $resp ) ) {
-			return '';
-		}
-		
-		$data = json_decode( wp_remote_retrieve_body( $resp ), true );
-		
-		return trim( $data['choices'][0]['message']['content'] ?? '' );
-	}
+                if ( is_wp_error( $resp ) ) {
+                        return $resp;
+                }
+
+                $data = json_decode( wp_remote_retrieve_body( $resp ), true );
+                $content = trim( $data['choices'][0]['message']['content'] ?? '' );
+
+                if ( $content === '' ) {
+                        return new \WP_Error( 'openai_empty', 'Empty response from OpenAI', [ 'status' => 502 ] );
+                }
+
+                return $content;
+        }
 
 	private static function prompt_ownership( array $data ): array {
 		return [
@@ -668,11 +693,11 @@ STRICT RULES:
 			return $markdown; // fallback: leave md unchanged
 		}
 
-		$body = [
-			'model'       => 'o3-mini',
-			'max_tokens'  => 2048,
-			'temperature' => 0,
-			'messages'    => [
+               $body = [
+                        'model'       => 'gpt-4o-mini',
+                        'max_tokens'  => 2048,
+                        'temperature' => 0,
+                        'messages'    => [
 				[ 
 					'role'    => 'system', 
 					'content' => 'You are a Markdown to HTML converter. Return ONLY valid HTML inside <section> without additional commentary.' 
@@ -696,12 +721,13 @@ STRICT RULES:
 			]
 		);
 
-		if ( is_wp_error( $response ) ) {
-			return $markdown;
-		}
+                if ( is_wp_error( $response ) ) {
+                        return $markdown;
+                }
 
-		$parsed = json_decode( wp_remote_retrieve_body( $response ), true );
-		
-		return $parsed['choices'][0]['message']['content'] ?? $markdown;
-	}
+                $parsed  = json_decode( wp_remote_retrieve_body( $response ), true );
+                $content = trim( $parsed['choices'][0]['message']['content'] ?? '' );
+
+                return $content !== '' ? $content : $markdown;
+        }
 }
